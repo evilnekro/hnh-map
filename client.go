@@ -214,13 +214,13 @@ func (m *Map) uploadMarkers(rw http.ResponseWriter, req *http.Request) {
 				var imageName = mraw.Name
 				switch {
 				case imageName == "Cave":
-					mraw.Image = "gfx/hud/nmap/cave"
+					mraw.Image = "gfx/hud/nmap/cave.png"
 				case imageName == "Minehole":
-					mraw.Image = "gfx/hud/nmap/minehole"
+					mraw.Image = "gfx/hud/nmap/cave.png"
 				case imageName == "Ladder":
-					mraw.Image = "gfx/hud/nmap/ladder"
+					mraw.Image = "gfx/hud/nmap/cave.png"
 				case imageName == "Exit":
-					mraw.Image = "gfx/hud/nmap/cave"
+					mraw.Image = "gfx/hud/nmap/cave.png"
 				default:
 					mraw.Image = "gfx/terobjs/mm/custom"
 				}
