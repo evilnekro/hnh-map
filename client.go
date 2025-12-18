@@ -36,6 +36,7 @@ func (m *Map) client(rw http.ResponseWriter, req *http.Request) {
 	}
 	auth := false
 	user := ""
+	u := User{}
 	m.db.View(func(tx *bbolt.Tx) error {
 		tb := tx.Bucket([]byte("tokens"))
 		if tb == nil {
@@ -53,7 +54,7 @@ func (m *Map) client(rw http.ResponseWriter, req *http.Request) {
 		if userRaw == nil {
 			return nil
 		}
-		u := User{}
+		//u = User{}
 		json.Unmarshal(userRaw, &u)
 		if u.Auths.Has(AUTH_UPLOAD) {
 			user = string(userName)
@@ -77,7 +78,7 @@ func (m *Map) client(rw http.ResponseWriter, req *http.Request) {
 	case "gridUpload":
 		m.gridUpload(rw, req)
 	case "positionUpdate":
-		m.updatePositions(rw, req)
+		m.updatePositions(rw, req, u)
 	case "markerUpdate":
 		m.uploadMarkers(rw, req)
 	/*case "mapData":
@@ -95,7 +96,7 @@ func (m *Map) client(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (m *Map) updatePositions(rw http.ResponseWriter, req *http.Request) {
+func (m *Map) updatePositions(rw http.ResponseWriter, req *http.Request, u User) {
 	defer req.Body.Close()
 	craws := map[string]struct {
 		Name   string
@@ -116,6 +117,7 @@ func (m *Map) updatePositions(rw http.ResponseWriter, req *http.Request) {
 		log.Println("Original json: ", string(buf))
 		return
 	}
+	groups := groupArr(u.Auths)
 	m.db.View(func(tx *bbolt.Tx) error {
 		grids := tx.Bucket([]byte("grids"))
 		if grids == nil {
@@ -141,6 +143,7 @@ func (m *Map) updatePositions(rw http.ResponseWriter, req *http.Request) {
 				},
 				Type:    craw.Type,
 				updated: time.Now(),
+				group:   groups,
 			}
 			old, ok := m.characters[id]
 			if !ok {
@@ -151,6 +154,7 @@ func (m *Map) updatePositions(rw http.ResponseWriter, req *http.Request) {
 						m.characters[id] = c
 					} else {
 						old.Position = c.Position
+						old.group = c.group
 						m.characters[id] = old
 					}
 				} else if old.Type != "unknown" {
@@ -158,6 +162,7 @@ func (m *Map) updatePositions(rw http.ResponseWriter, req *http.Request) {
 						m.characters[id] = c
 					} else {
 						old.Position = c.Position
+						old.group = c.group
 						m.characters[id] = old
 					}
 				} else {
@@ -211,19 +216,7 @@ func (m *Map) uploadMarkers(rw http.ResponseWriter, req *http.Request) {
 				continue
 			}
 			if mraw.Image == "" {
-				var imageName = mraw.Name
-				switch {
-				case imageName == "Cave":
-					mraw.Image = "gfx/hud/nmap/cave.png"
-				case imageName == "Minehole":
-					mraw.Image = "gfx/hud/nmap/cave.png"
-				case imageName == "Ladder":
-					mraw.Image = "gfx/hud/nmap/cave.png"
-				case imageName == "Exit":
-					mraw.Image = "gfx/hud/nmap/cave.png"
-				default:
-					mraw.Image = "gfx/terobjs/mm/custom"
-				}
+				mraw.Image = "gfx/terobjs/mm/custom"
 			}
 			id, err := idB.NextSequence()
 			if err != nil {
@@ -488,7 +481,7 @@ func (m *Map) gridUpdate(rw http.ResponseWriter, req *http.Request) {
 		m.SaveTile(op.mapid, Coord{X: op.x, Y: op.y}, 0, op.f, time.Now().UnixNano())
 		needProcess[zoomproc{c: Coord{X: op.x, Y: op.y}.Parent(), m: op.mapid}] = struct{}{}
 	}
-	for z := 1; z <= 5; z++ {
+	for z := 1; z <= 6; z++ {
 		process := needProcess
 		needProcess = map[zoomproc]struct{}{}
 		for p := range process {
@@ -670,7 +663,7 @@ func (m *Map) gridUpload(rw http.ResponseWriter, req *http.Request) {
 		m.SaveTile(mapid, cur.Coord, 0, fmt.Sprintf("grids/%s.png", cur.ID), time.Now().UnixNano())
 
 		c := cur.Coord
-		for z := 1; z <= 5; z++ {
+		for z := 1; z <= 6; z++ {
 			c = c.Parent()
 			m.updateZoomLevel(mapid, c, z)
 		}
